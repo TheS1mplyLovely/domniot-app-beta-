@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Camera as CapCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { Capacitor } from '@capacitor/core';
 import { 
   Droplets, 
   Thermometer, 
@@ -68,6 +71,22 @@ export default function App() {
   const lastNotificationTime = React.useRef<number>(0);
   const NOTIFICATION_COOLDOWN = 60000; // 1 minute
 
+  // Uygulama açılışında kamera + bildirim izni iste
+  useEffect(() => {
+    const requestStartupPermissions = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      try {
+        // Kamera izni
+        await CapCamera.requestPermissions({ permissions: ['camera'] });
+        // Bildirim izni
+        await LocalNotifications.requestPermissions();
+      } catch (err) {
+        console.error('Startup permission error:', err);
+      }
+    };
+    requestStartupPermissions();
+  }, []);
+
   // Calculate RGB Similarity
   const calculateSimilarity = (m: {r:number, g:number, b:number}, r: {r:number, g:number, b:number}) => {
     const distance = Math.sqrt(
@@ -81,38 +100,53 @@ export default function App() {
 
   const t = translations[settings.language];
 
-  // Notification Logic
+  // Notification Logic — Capacitor native + web fallback
   const requestNotificationPermission = async () => {
-    if (!("Notification" in window)) {
-      console.log("This browser does not support desktop notification");
-      return;
-    }
-
-    if (Notification.permission !== "granted") {
-      const permission = await Notification.requestPermission();
-      if (permission === "granted") {
-        setSettings(prev => ({ ...prev, notificationsEnabled: true }));
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const result = await LocalNotifications.requestPermissions();
+        if (result.display === 'granted') {
+          setSettings(prev => ({ ...prev, notificationsEnabled: true }));
+        } else {
+          alert(t.notificationPermissionDenied);
+        }
       } else {
-        alert(t.notificationPermissionDenied);
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") {
+          const permission = await Notification.requestPermission();
+          if (permission === "granted") {
+            setSettings(prev => ({ ...prev, notificationsEnabled: true }));
+          } else {
+            alert(t.notificationPermissionDenied);
+          }
+        } else {
+          setSettings(prev => ({ ...prev, notificationsEnabled: !prev.notificationsEnabled }));
+        }
       }
-    } else {
-      setSettings(prev => ({ ...prev, notificationsEnabled: !prev.notificationsEnabled }));
+    } catch (err) {
+      console.error("Notification permission error:", err);
     }
   };
 
   const sendNotification = useCallback((title: string, body: string) => {
-    if (!settings.notificationsEnabled || Notification.permission !== "granted") return;
-    
+    if (!settings.notificationsEnabled) return;
     const now = Date.now();
     if (now - lastNotificationTime.current < NOTIFICATION_COOLDOWN) return;
+    lastNotificationTime.current = now;
 
     try {
-      new Notification(title, {
-        body,
-        icon: '/favicon.ico',
-        tag: 'domniot-alert'
-      });
-      lastNotificationTime.current = now;
+      if (Capacitor.isNativePlatform()) {
+        LocalNotifications.schedule({
+          notifications: [{
+            id: Math.floor(Date.now() / 1000),
+            title,
+            body,
+            smallIcon: 'ic_stat_icon_config_sample',
+          }]
+        });
+      } else if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(title, { body, icon: '/favicon.ico', tag: 'domniot-alert' });
+      }
     } catch (err) {
       console.error("Notification error:", err);
     }
@@ -161,8 +195,9 @@ export default function App() {
     return () => clearInterval(interval);
   }, [refreshData, settings.pollingInterval]);
 
-  // Camera Logic
+  // Camera Logic — Capacitor native + web fallback
   const getAvailableCameras = async () => {
+    if (Capacitor.isNativePlatform()) return; // Native'de kamera seçimi yok
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
@@ -176,20 +211,33 @@ export default function App() {
   };
 
   const startCamera = async (deviceId?: string) => {
+    if (Capacitor.isNativePlatform()) {
+      // Native Android: Capacitor Camera izni kontrol et
+      try {
+        const perms = await CapCamera.requestPermissions({ permissions: ['camera'] });
+        if (perms.camera !== 'granted') {
+          setCameraError(t.cameraError);
+        } else {
+          setCameraError(null);
+        }
+      } catch (err) {
+        console.error("Camera permission error:", err);
+        setCameraError(t.cameraError);
+      }
+      return;
+    }
+    // Web fallback
     try {
       stopCamera();
-      const constraints = deviceId 
+      const constraints = deviceId
         ? { video: { deviceId: { exact: deviceId } } }
         : { video: { facingMode: 'environment' } };
-      
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       setCameraStream(stream);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
       }
       setCameraError(null);
-      
-      // Update available cameras after permission is granted
       getAvailableCameras();
     } catch (err) {
       console.error("Camera error:", err);
@@ -204,7 +252,40 @@ export default function App() {
     }
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
+    if (Capacitor.isNativePlatform()) {
+      // Native Android: Capacitor Camera ile fotoğraf çek
+      try {
+        const photo = await CapCamera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+        });
+        if (photo.dataUrl) {
+          setCapturedImage(photo.dataUrl);
+          // RGB analizi için canvas kullan
+          const img = new Image();
+          img.onload = () => {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              analyzeImage(ctx, img.width, img.height);
+            }
+          };
+          img.src = photo.dataUrl;
+        }
+      } catch (err) {
+        console.error("Capture error:", err);
+        setCameraError(t.cameraError);
+      }
+      return;
+    }
+    // Web fallback
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;

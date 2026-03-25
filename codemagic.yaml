@@ -7,9 +7,6 @@ workflows:
       java: 21
       vars:
         PACKAGE_NAME: "com.domniot.app"
-        # Aşağıdaki değerleri Codemagic Environment Variables panelinden ekle:
-        # GEMINI_API_KEY: Gemini API anahtarın
-        # CM_KEYSTORE, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD (imzalama için)
     scripts:
       - name: Install npm dependencies
         script: npm install
@@ -19,7 +16,7 @@ workflows:
 
       - name: Build web assets
         script: |
-          echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+          echo "GEMINI_API_KEY=${GEMINI_API_KEY:-}" > .env
           npm run build
 
       - name: Add Android platform
@@ -31,9 +28,10 @@ workflows:
       - name: Sync Capacitor
         script: npx cap sync android
 
-      - name: Set permissions in AndroidManifest.xml
+      - name: Set AndroidManifest permissions
         script: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
+          # cleartext (ESP32 HTTP)
           if ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
             sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
           fi
@@ -43,25 +41,13 @@ workflows:
           cd android
           ./gradlew assembleDebug
 
-      # İmzalı release APK için (opsiyonel, önce debug ile test et):
-      # - name: Build release APK
-      #   script: |
-      #     cd android
-      #     echo $CM_KEYSTORE | base64 --decode > keystore.jks
-      #     ./gradlew assembleRelease \
-      #       -Pandroid.injected.signing.store.file=$(pwd)/keystore.jks \
-      #       -Pandroid.injected.signing.store.password=$CM_KEYSTORE_PASSWORD \
-      #       -Pandroid.injected.signing.key.alias=$CM_KEY_ALIAS \
-      #       -Pandroid.injected.signing.key.password=$CM_KEY_PASSWORD
-
     artifacts:
       - android/app/build/outputs/apk/debug/app-debug.apk
-      # - android/app/build/outputs/apk/release/app-release.apk
 
     publishing:
       email:
         recipients:
-          - your@email.com   # <-- kendi mailin
+          - your@email.com
         notify:
           success: true
           failure: true

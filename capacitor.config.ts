@@ -6,7 +6,6 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
-    // ESP32'ye HTTP erişim için cleartext izni (AndroidManifest'te de açılacak)
     cleartext: true,
   },
   android: {
@@ -16,6 +15,10 @@ const config: CapacitorConfig = {
   plugins: {
     Camera: {
       permissions: ['camera'],
+    },
+    LocalNotifications: {
+      smallIcon: 'ic_stat_icon_config_sample',
+      iconColor: '#488AFF',
     },
   },
 };
