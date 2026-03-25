@@ -34,9 +34,8 @@ workflows:
       - name: Set permissions in AndroidManifest.xml
         script: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # INTERNET permission zaten var, cleartext ekle
           if ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
-            sed -i 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
+            sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
           fi
 
       - name: Build debug APK
