@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
     environment:
       node: 22.12.0
-      java: 17
+      java: 21
       vars:
         PACKAGE_NAME: "com.domniot.app"
         # Aşağıdaki değerleri Codemagic Environment Variables panelinden ekle:
