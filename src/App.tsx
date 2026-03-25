@@ -339,10 +339,11 @@ export default function App() {
     setCapturedImage(null);
     setCameraRgb(null);
     setCameraAnalysisRgb(null);
-    startCamera();
+    if (!Capacitor.isNativePlatform()) startCamera();
   };
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return; // Native: video stream yok
     if (activeTab === 'camera') {
       startCamera(selectedCameraId);
     } else {
@@ -731,29 +732,54 @@ export default function App() {
                   <div className="relative aspect-video rounded-[2rem] overflow-hidden bg-black/20 border border-white/5">
                     {!capturedImage ? (
                       <>
-                        <video 
-                          ref={videoRef} 
-                          autoPlay 
-                          playsInline 
-                          className="w-full h-full object-cover"
-                        />
-                        {cameraError && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white p-4 text-center">
-                            <div className="space-y-2">
-                              <AlertTriangle className="mx-auto text-amber-500" size={32} />
-                              <p className="text-sm font-bold">{cameraError}</p>
-                            </div>
+                        {Capacitor.isNativePlatform() ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 bg-black/30">
+                            <Camera size={64} className="opacity-40" />
+                            <p className="text-white/60 text-sm font-bold uppercase tracking-widest text-center px-8">
+                              Fotoğraf çekmek için butona bas
+                            </p>
+                            {cameraError && (
+                              <div className="flex items-center gap-2 text-amber-400">
+                                <AlertTriangle size={16} />
+                                <p className="text-xs font-bold">{cameraError}</p>
+                              </div>
+                            )}
+                            <button
+                              onClick={capturePhoto}
+                              className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform"
+                            >
+                              <div className="w-14 h-14 rounded-full border-2 border-black/10 flex items-center justify-center">
+                                <Camera size={28} className="text-black" />
+                              </div>
+                            </button>
                           </div>
+                        ) : (
+                          <>
+                            <video
+                              ref={videoRef}
+                              autoPlay
+                              playsInline
+                              className="w-full h-full object-cover"
+                            />
+                            {cameraError && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white p-4 text-center">
+                                <div className="space-y-2">
+                                  <AlertTriangle className="mx-auto text-amber-500" size={32} />
+                                  <p className="text-sm font-bold">{cameraError}</p>
+                                </div>
+                              </div>
+                            )}
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
+                              <button
+                                onClick={capturePhoto}
+                                disabled={!cameraStream}
+                                className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100"
+                              >
+                                <div className="w-12 h-12 rounded-full border-2 border-black/10" />
+                              </button>
+                            </div>
+                          </>
                         )}
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
-                          <button 
-                            onClick={capturePhoto}
-                            disabled={!cameraStream}
-                            className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100"
-                          >
-                            <div className="w-12 h-12 rounded-full border-2 border-black/10" />
-                          </button>
-                        </div>
                       </>
                     ) : (
                       <>
