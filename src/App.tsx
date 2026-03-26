@@ -59,14 +59,37 @@ export default function App() {
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
 
-  const [settings, setSettings] = useState<AppSettings>({
-    espIp: '192.168.1.100',
-    referenceRgb: { r: 120, g: 180, b: 80 },
-    pollingInterval: 5000,
-    language: 'en',
-    theme: 'dark',
-    notificationsEnabled: false
-  });
+  // Ayarları localStorage'dan yükle, yoksa varsayılanları kullan
+  const loadSettings = (): AppSettings => {
+    try {
+      const saved = localStorage.getItem('domniot_settings');
+      if (saved) return { ...{
+        espIp: '192.168.1.100',
+        referenceRgb: { r: 120, g: 180, b: 80 },
+        pollingInterval: 5000,
+        language: 'en',
+        theme: 'dark',
+        notificationsEnabled: false
+      }, ...JSON.parse(saved) };
+    } catch {}
+    return {
+      espIp: '192.168.1.100',
+      referenceRgb: { r: 120, g: 180, b: 80 },
+      pollingInterval: 5000,
+      language: 'en',
+      theme: 'dark',
+      notificationsEnabled: false
+    };
+  };
+
+  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+
+  // Ayarlar değişince localStorage'a kaydet
+  useEffect(() => {
+    try {
+      localStorage.setItem('domniot_settings', JSON.stringify(settings));
+    } catch {}
+  }, [settings]);
 
   const lastNotificationTime = React.useRef<number>(0);
   const NOTIFICATION_COOLDOWN = 60000; // 1 minute
