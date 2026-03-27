@@ -491,7 +491,7 @@ export default function App() {
                         </span>
                       )}
                     </div>
-                    <h2 className="text-5xl md:text-7xl font-bold tracking-tighter mb-2 italic">
+                    <h2 className="text-3xl md:text-5xl font-bold tracking-tighter mb-2 italic leading-tight">
                       {sensorData?.plantStatus === 'Healthy' ? t.healthy : sensorData?.plantStatus === 'Stressed' ? t.stressed : t.healthy}
                     </h2>
                     <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 mt-6 md:mt-8">
@@ -967,7 +967,7 @@ export default function App() {
                       settings.theme === 'dark' ? "text-white/40" : "text-black/40"
                     )}>{t.interfaceLanguage}</label>
                     <div className={cn(
-                      "grid grid-cols-3 gap-1 border rounded-2xl p-1 transition-colors",
+                      "grid grid-cols-2 gap-1 border rounded-2xl p-1 transition-colors",
                       settings.theme === 'dark' ? "bg-black/40 border-white/10" : "bg-black/5 border-black/10"
                     )}>
                       {([
@@ -975,7 +975,6 @@ export default function App() {
                         { code: 'tr', label: t.turkish },
                         { code: 'ru', label: t.russian },
                         { code: 'az', label: t.azerbaijani },
-                        { code: 'de', label: t.german },
                       ] as { code: typeof settings.language, label: string }[]).map(({ code, label }) => (
                         <button
                           key={code}
