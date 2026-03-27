@@ -125,6 +125,11 @@ export default function App() {
 
   // Notification Logic — Capacitor native + web fallback
   const requestNotificationPermission = async () => {
+    // Zaten açıksa kapat
+    if (settings.notificationsEnabled) {
+      setSettings(prev => ({ ...prev, notificationsEnabled: false }));
+      return;
+    }
     try {
       if (Capacitor.isNativePlatform()) {
         const result = await LocalNotifications.requestPermissions();
@@ -143,7 +148,7 @@ export default function App() {
             alert(t.notificationPermissionDenied);
           }
         } else {
-          setSettings(prev => ({ ...prev, notificationsEnabled: !prev.notificationsEnabled }));
+          setSettings(prev => ({ ...prev, notificationsEnabled: true }));
         }
       }
     } catch (err) {
@@ -962,53 +967,29 @@ export default function App() {
                       settings.theme === 'dark' ? "text-white/40" : "text-black/40"
                     )}>{t.interfaceLanguage}</label>
                     <div className={cn(
-                      "flex border rounded-2xl p-1 transition-colors",
+                      "grid grid-cols-3 gap-1 border rounded-2xl p-1 transition-colors",
                       settings.theme === 'dark' ? "bg-black/40 border-white/10" : "bg-black/5 border-black/10"
                     )}>
-                      <button 
-                        onClick={() => setSettings({...settings, language: 'en'})}
-                        className={cn(
-                          "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all", 
-                          settings.language === 'en' 
-                            ? settings.theme === 'dark' ? "bg-white/10 text-white" : "bg-black/10 text-black"
-                            : settings.theme === 'dark' ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
-                        )}
-                      >
-                        {t.english}
-                      </button>
-                      <button 
-                        onClick={() => setSettings({...settings, language: 'tr'})}
-                        className={cn(
-                          "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all", 
-                          settings.language === 'tr' 
-                            ? settings.theme === 'dark' ? "bg-white/10 text-white" : "bg-black/10 text-black"
-                            : settings.theme === 'dark' ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
-                        )}
-                      >
-                        {t.turkish}
-                      </button>
-                      <button 
-                        onClick={() => setSettings({...settings, language: 'ru'})}
-                        className={cn(
-                          "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all", 
-                          settings.language === 'ru' 
-                            ? settings.theme === 'dark' ? "bg-white/10 text-white" : "bg-black/10 text-black"
-                            : settings.theme === 'dark' ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
-                        )}
-                      >
-                        {t.russian}
-                      </button>
-                      <button 
-                        onClick={() => setSettings({...settings, language: 'az'})}
-                        className={cn(
-                          "flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all", 
-                          settings.language === 'az' 
-                            ? settings.theme === 'dark' ? "bg-white/10 text-white" : "bg-black/10 text-black"
-                            : settings.theme === 'dark' ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
-                        )}
-                      >
-                        {t.azerbaijani}
-                      </button>
+                      {([
+                        { code: 'en', label: t.english },
+                        { code: 'tr', label: t.turkish },
+                        { code: 'ru', label: t.russian },
+                        { code: 'az', label: t.azerbaijani },
+                        { code: 'de', label: t.german },
+                      ] as { code: typeof settings.language, label: string }[]).map(({ code, label }) => (
+                        <button
+                          key={code}
+                          onClick={() => setSettings({...settings, language: code})}
+                          className={cn(
+                            "py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all",
+                            settings.language === code
+                              ? settings.theme === 'dark' ? "bg-white/10 text-white" : "bg-black/10 text-black"
+                              : settings.theme === 'dark' ? "text-white/40 hover:text-white" : "text-black/40 hover:text-black"
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
