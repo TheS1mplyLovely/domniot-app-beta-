@@ -1,53 +1,50 @@
-workflows:
-  android-release:
-    name: Domniot Android APK
-    max_build_duration: 60
-    environment:
-      node: 22.12.0
-      java: 21
-      vars:
-        PACKAGE_NAME: "com.domniot.app"
-    scripts:
-      - name: Install npm dependencies
-        script: npm install
+# Domniot App
 
-      - name: Install Capacitor CLI
-        script: npm install -g @capacitor/cli
+ESP32 tabanlı bitki izleme uygulaması — React + Capacitor ile Android APK.
 
-      - name: Build web assets
-        script: |
-          echo "GEMINI_API_KEY=${GEMINI_API_KEY:-}" > .env
-          npm run build
+## 🚀 Codemagic ile APK Yapma (Önerilen)
 
-      - name: Add Android platform
-        script: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
+### 1. GitHub'a yükle
+```bash
+git init
+git add .
+git commit -m "Initial commit"
+git remote add origin https://github.com/KULLANICI_ADIN/domniot.git
+git push -u origin main
+```
 
-      - name: Sync Capacitor
-        script: npx cap sync android
+### 2. Codemagic'te ayarla
+1. [codemagic.io](https://codemagic.io) → **Add application** → GitHub repon
+2. **Environment variables** panelinden ekle:
+   - `GEMINI_API_KEY` = Gemini API anahtarın
+3. **Start build** → `android-release` workflow'unu seç
+4. Build bittikten sonra APK indir!
 
-      - name: Set AndroidManifest permissions
-        script: |
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # cleartext (ESP32 HTTP)
-          if ! grep -q "usesCleartextTraffic" "$MANIFEST"; then
-            sed -i '' 's/<application/<application android:usesCleartextTraffic="true"/' "$MANIFEST"
-          fi
+### 3. Yerel geliştirme (opsiyonel)
+```bash
+npm install
+npm run build
+npx cap add android      # ilk seferinde
+npx cap sync android
+npx cap open android     # Android Studio açar
+```
 
-      - name: Build debug APK
-        script: |
-          cd android
-          ./gradlew assembleDebug
+## ⚠️ Önemli Notlar
 
-    artifacts:
-      - android/app/build/outputs/apk/debug/app-debug.apk
+- **ESP32 HTTP bağlantısı**: `capacitor.config.ts` içinde `cleartext: true` ayarlı — lokal ağda HTTP çalışır.
+- **Gemini API Key**: `.env` dosyasına ekle (git'e commit etme!).
+- **Kamera**: Android'de kamera izni otomatik istenir.
 
-    publishing:
-      email:
-        recipients:
-          - your@email.com
-        notify:
-          success: true
-          failure: true
+## 📁 Proje Yapısı
+
+```
+├── src/
+│   ├── App.tsx          # Ana uygulama
+│   ├── services/
+│   │   └── espService.ts # ESP32 API servisi
+│   ├── types.ts
+│   └── translations.ts
+├── capacitor.config.ts  # Capacitor ayarları
+├── codemagic.yaml       # CI/CD pipeline
+└── vite.config.ts       # Build ayarları
+```

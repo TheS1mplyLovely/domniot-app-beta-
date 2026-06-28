@@ -1,26 +1,26 @@
-import { CapacitorConfig } from '@capacitor/cli';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
 
-const config: CapacitorConfig = {
-  appId: 'com.domniot.app',
-  appName: 'Domniot',
-  webDir: 'dist',
-  server: {
-    androidScheme: 'https',
-    cleartext: true,
-  },
-  android: {
-    allowMixedContent: true,
-    backgroundColor: '#000000',
-  },
-  plugins: {
-    Camera: {
-      permissions: ['camera'],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '.', '');
+  return {
+    plugins: [react(), tailwindcss()],
+    define: {
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
     },
-    LocalNotifications: {
-      smallIcon: 'ic_stat_icon_config_sample',
-      iconColor: '#488AFF',
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+      },
     },
-  },
-};
-
-export default config;
+    base: './', // Capacitor için relative path şart!
+    build: {
+      outDir: 'dist',
+    },
+    server: {
+      hmr: process.env.DISABLE_HMR !== 'true',
+    },
+  };
+});
